@@ -2,7 +2,7 @@ import {useState, useEffect} from 'react';
 import axios from "axios"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API = "http://localhost:8000"
+const API = "https://ollive-llm-inference-logger-backend.onrender.com"
 
 export default function App(){
     const [conversations, setConversations] = useState([]);
