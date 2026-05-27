@@ -4,6 +4,7 @@ from typing import List
 class MessageInput(BaseModel):
     session_id: str
     message: str
+    provider: str = "groq-fast"
 
 class NewConversationInput(BaseModel):
     session_id: str
