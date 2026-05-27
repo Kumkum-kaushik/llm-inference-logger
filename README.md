@@ -1,178 +1,106 @@
-# Ollive Assignment — LLM Inference Logging System
+# LLM Inference Logging System
 
-A full-stack chatbot application with inference logging, built with FastAPI, React, PostgreSQL, and Groq (LLaMA 3).
+A full-stack chatbot app built with FastAPI, React, PostgreSQL, and Groq (LLaMA 3). Every LLM call gets logged — latency, tokens, model, status — so you can actually see what's happening under the hood.
 
 ---
 
 ## What this does
 
-A lightweight system that:
-- Lets users chat with an LLM (multi-turn conversations)
-- Logs every inference call — latency, token usage, model, status, timestamps
-- Stores all chat messages and metadata in PostgreSQL
-- Exposes a clean REST API for ingestion and retrieval
-- Provides a simple React UI to create, resume, and delete conversations
+- Chat with an LLM across multiple turns
+- Every inference call is logged — latency, token usage, model, provider, status
+- PII (emails, phone numbers) is automatically redacted before storing logs
+- Live dashboard showing avg latency, total tokens, total requests, and errors
+- Switch between two Groq models mid-conversation
+- Streaming responses — text appears word by word as the model generates it
+- One-command Docker setup — no manual installs needed
 
 ---
 
-## Setup Instructions
+## Quick Start (Docker)
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL 17
-- Groq API key (free at console.groq.com)
+1. Make sure Docker Desktop is running
+2. Create a .env file in the root folder with: GROQ_API_KEY=your_groq_api_key_here
+3. Run: docker compose up --build
 
-### Backend
+Frontend at http://localhost:5173 and API docs at http://localhost:8000/docs
 
-```bash
+---
+
+## Manual Setup
+
+Prerequisites: Python 3.10+, Node.js 18+, PostgreSQL 17, Groq API key from console.groq.com
+
+Backend setup:
 cd backend
 python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
-
+venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-Create a `.env` file in the backend folder:
-```
-GROQ_API_KEY=your_groq_api_key_here
-```
+Create a .env file in backend folder: GROQ_API_KEY=your_groq_api_key_here
 
-Create the database:
-```bash
-psql -U postgres -h 127.0.0.1
-CREATE DATABASE ollive_db;
-\q
-```
+Create the database in psql: CREATE DATABASE ollive_db;
 
-Start the backend:
-```bash
-uvicorn main:app --reload
-```
+Start the server: uvicorn main:app --reload
 
-API docs available at: `http://127.0.0.1:8000/docs`
-
-### Frontend
-
-```bash
+Frontend setup:
 cd frontend
 npm install
 npm run dev
-```
-
-Frontend runs at: `http://localhost:5173`
 
 ---
 
-## Architecture Overview
+## How it works
 
-```
-User (React UI)
-      ↓
-FastAPI Backend
-      ↓
-  SDK Layer (sdk.py)
-  - Calls Groq LLM
-  - Measures latency
-  - Captures token usage
-  - Logs to DB in real time
-      ↓
-PostgreSQL Database
-  - conversations
-  - messages  
-  - inference_logs
-```
+User chats in the React UI, which calls the FastAPI backend. The backend passes the message to the SDK layer, which calls the Groq LLM, measures latency, captures token counts, redacts any PII, and writes a log to PostgreSQL — all before returning the response to the user.
 
-The SDK layer wraps every LLM call — before the call it records the start time, after the call it captures token counts and status, then immediately writes the log to the database. This happens synchronously so no logs are lost.
-
----
-
-## Schema Design
-
-### conversations
-```sql
-id          SERIAL PRIMARY KEY
-session_id  VARCHAR(100) UNIQUE NOT NULL
-created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-```
-
-### messages
-```sql
-id          SERIAL PRIMARY KEY
-session_id  VARCHAR(100) NOT NULL
-role        VARCHAR(20) NOT NULL   -- 'user' or 'assistant'
-content     TEXT NOT NULL
-created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-```
-
-### inference_logs
-```sql
-id             SERIAL PRIMARY KEY
-session_id     VARCHAR(100) NOT NULL
-model          VARCHAR(100)         -- e.g. llama-3.1-8b-instant
-provider       VARCHAR(50)          -- e.g. groq
-latency_ms     FLOAT                -- end-to-end response time
-input_tokens   INTEGER
-output_tokens  INTEGER
-status         VARCHAR(20)          -- success or error
-input_preview  TEXT                 -- first 100 chars of input
-output_preview TEXT                 -- first 100 chars of output
-created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-```
-
-**Why this schema?**
-- `conversations` and `messages` are separate — easy to list all chats without loading message history
-- `inference_logs` is separate from `messages` — observability data shouldn't be mixed with chat data
-- `input_preview` and `output_preview` store only 100 chars — enough for debugging without bloating storage
-- `session_id` as VARCHAR (UUID) rather than FK integer — keeps ingestion simple and stateless
+Tables: conversations, messages, inference_logs
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/conversation/new` | Start a new conversation |
-| GET | `/conversations` | List all conversations |
-| POST | `/chat` | Send a message, get a response |
-| GET | `/conversation/{id}/messages` | Get message history |
-| DELETE | `/conversation/{id}` | Cancel/delete a conversation |
-| GET | `/logs` | View inference logs |
+POST   /conversation/new              Start a new conversation
+GET    /conversations                 List all conversations
+POST   /chat                          Send a message, get a response
+POST   /chat/stream                   Same but streams tokens in real time
+GET    /conversation/{id}/messages    Get message history
+DELETE /conversation/{id}             Delete a conversation
+GET    /logs                          View recent inference logs
+GET    /stats                         Avg latency, total tokens, error count
 
 ---
 
-## Tradeoffs Made
+## Bonus Features
 
-**Synchronous logging** — logs are written to DB in the same request cycle. Simpler and guarantees no lost logs, but adds a small DB write latency to every chat response. For production, this would move to async or a queue.
+Docker Compose — one command starts backend, frontend, and PostgreSQL together. Backend waits for DB to be healthy before starting.
 
-**In-process SDK** — the SDK lives in the same FastAPI process rather than as a separate service. Faster to build, easier to debug, but harder to scale independently.
+PII Redaction — pii.py uses regex to replace emails and phone numbers with [EMAIL REDACTED] and [PHONE REDACTED] before storing in the database.
 
-**No connection pooling** — each DB operation opens and closes a connection. Fine for low traffic, but for production would use psycopg2.pool or SQLAlchemy with pooling.
+Dashboard — Stats tab shows metric cards and a bar chart for latency, tokens, requests, and errors using Recharts.
 
-**Preview truncation at 100 chars** — keeps logs lightweight. Full content is already in the messages table, so nothing is lost.
+Multi-provider — dropdown to pick between Groq Fast (llama-3.1-8b-instant) and Groq Large (llama-3.3-70b-versatile).
 
-**PostgreSQL over SQLite** — chose PostgreSQL for proper concurrent access, better query performance on logs, and production readiness.
+Streaming — /chat/stream uses FastAPI StreamingResponse. Frontend reads it with fetch() and ReadableStream, updating the message token by token.
 
 ---
 
-## What I'd Improve With More Time
+## Tradeoffs
 
-- Async logging via a queue (Redis + worker) to remove DB write from the critical path
-- Connection pooling for the database
-- Streaming responses from the LLM
-- Dashboard UI for latency and token usage trends
-- Docker Compose for one-command setup
-- PII redaction before storing message previews
-- Pagination on the /logs and /conversations endpoints
-- Better error handling and retry logic in the SDK
+Synchronous logging — writing to DB in the same request cycle keeps things simple. For higher traffic this should move to an async queue.
+
+No connection pooling — each DB call opens and closes a connection. Production would use psycopg2.pool or SQLAlchemy.
+
+In-process SDK — lives in the same FastAPI process. Easy to reason about but harder to scale independently.
+
+100-char preview — enough to debug without bloating storage. Full content is always in the messages table.
 
 ---
 
 ## Tech Stack
 
-- **Backend** — FastAPI (Python)
-- **Database** — PostgreSQL
-- **LLM** — Groq (LLaMA 3.1 8B)
-- **Frontend** — React + Vite
-- **HTTP Client** — Axios
+Backend — FastAPI (Python)
+Database — PostgreSQL
+LLM — Groq (LLaMA 3.1 8B / LLaMA 3.3 70B)
+Frontend — React + Vite + Recharts
+HTTP Client — Axios
+Containerization — Docker + Docker Compose
