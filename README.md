@@ -1,121 +1,331 @@
 # LLM Inference Logging System
 
-A full-stack chatbot app built with FastAPI, React, PostgreSQL, and Groq (LLaMA 3). Every LLM call gets logged — latency, tokens, model, status — so you can actually see what's happening under the hood.
+A full-stack chatbot application built with FastAPI, React, PostgreSQL, and Groq using LLaMA 3 models.
 
+The goal of this project is not only to build an LLM-powered chatbot, but also to understand what happens internally during every inference call. Each request is logged with useful metadata such as latency, token usage, selected model, provider details, and request status.
 
+The system also includes PII redaction, streaming responses, model switching, and a live analytics dashboard for monitoring inference behavior in real time.
 
-## What this does
+---
 
-- Chat with an LLM across multiple turns
-- Every inference call is logged — latency, token usage, model, provider, status
-- PII (emails, phone numbers) is automatically redacted before storing logs
-- Live dashboard showing avg latency, total tokens, total requests, and errors
-- Switch between two Groq models mid-conversation
-- Streaming responses — text appears word by word as the model generates it
-- One-command Docker setup — no manual installs needed
+# Features
 
+- Multi-turn chatbot conversations
+- Inference logging for every LLM request
+- Tracks latency, token usage, model, provider, and request status
+- Automatic PII redaction before storing logs
+- Live analytics dashboard with charts and metrics
+- Streaming responses with token-by-token rendering
+- Switch between multiple Groq LLaMA models during chat
+- Docker support for one-command setup
 
+---
 
-## Quick Start (Docker)
+# Quick Start (Docker)
 
-1. Make sure Docker Desktop is running
-2. Create a .env file in the root folder with: GROQ_API_KEY=your_groq_api_key_here
-3. Run: docker compose up --build
+### Prerequisites
 
-Frontend at http://localhost:5173 and API docs at http://localhost:8000/docs
+- Docker Desktop installed and running
+- Groq API key from https://console.groq.com
 
+### Setup
 
+Create a `.env` file in the root directory:
 
-## Manual Setup
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-Prerequisites: Python 3.10+, Node.js 18+, PostgreSQL 17, Groq API key from console.groq.com
+Run the project:
 
-Backend setup:
+```bash
+docker compose up --build
+```
+
+### Services
+
+Frontend:
+```txt
+http://localhost:5173
+```
+
+FastAPI Docs:
+```txt
+http://localhost:8000/docs
+```
+
+---
+
+# Manual Setup
+
+## Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL 17
+- Groq API Key
+
+---
+
+# Backend Setup
+
+```bash
 cd backend
+
 python -m venv venv
+```
+
+Activate virtual environment:
+
+### Windows
+```bash
 venv\Scripts\activate
+```
+
+Install dependencies:
+
+```bash
 pip install -r requirements.txt
+```
 
-Create a .env file in backend folder: GROQ_API_KEY=your_groq_api_key_here
+Create a `.env` file inside the backend folder:
 
-Create the database in psql: CREATE DATABASE ollive_db;
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-Start the server: uvicorn main:app --reload
+Create the PostgreSQL database:
 
-Frontend setup:
+```sql
+CREATE DATABASE ollive_db;
+```
+
+Start the backend server:
+
+```bash
+uvicorn main:app --reload
+```
+
+---
+
+# Frontend Setup
+
+```bash
 cd frontend
+
 npm install
+
 npm run dev
+```
 
+---
 
+# Project Workflow
 
-## How it works
+The user interacts with the chatbot through the React frontend.
 
-User chats in the React UI, which calls the FastAPI backend. The backend passes the message to the SDK layer, which calls the Groq LLM, measures latency, captures token counts, redacts any PII, and writes a log to PostgreSQL — all before returning the response to the user.
+The frontend sends requests to the FastAPI backend, which forwards them to the SDK layer responsible for handling Groq LLM inference.
 
-Tables: conversations, messages, inference_logs
+Before returning the response to the user, the backend:
 
+- Measures latency
+- Tracks token usage
+- Redacts sensitive information
+- Stores logs in PostgreSQL
 
+The system maintains three main tables:
 
-## API Endpoints
+- `conversations`
+- `messages`
+- `inference_logs`
 
-POST   /conversation/new              Start a new conversation
-GET    /conversations                 List all conversations
-POST   /chat                          Send a message, get a response
-POST   /chat/stream                   Same but streams tokens in real time
-GET    /conversation/{id}/messages    Get message history
-DELETE /conversation/{id}             Delete a conversation
-GET    /logs                          View recent inference logs
-GET    /stats                         Avg latency, total tokens, error count
+---
 
+# API Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/conversation/new` | Create a new conversation |
+| GET | `/conversations` | Get all conversations |
+| POST | `/chat` | Send a message and receive response |
+| POST | `/chat/stream` | Stream response token by token |
+| GET | `/conversation/{id}/messages` | Get conversation history |
+| DELETE | `/conversation/{id}` | Delete a conversation |
+| GET | `/logs` | Fetch inference logs |
+| GET | `/stats` | Fetch latency and token statistics |
 
-## Bonus Features
+---
 
-Docker Compose — one command starts backend, frontend, and PostgreSQL together. Backend waits for DB to be healthy before starting.
+# Bonus Features
 
-PII Redaction — pii.py uses regex to replace emails and phone numbers with [EMAIL REDACTED] and [PHONE REDACTED] before storing in the database.
+## Streaming Responses
 
-Dashboard — Stats tab shows metric cards and a bar chart for latency, tokens, requests, and errors using Recharts.
+The `/chat/stream` endpoint uses FastAPI `StreamingResponse`.
 
-Multi-provider — dropdown to pick between Groq Fast (llama-3.1-8b-instant) and Groq Large (llama-3.3-70b-versatile).
+On the frontend, responses are handled using `fetch()` and `ReadableStream`, allowing tokens to appear gradually in real time.
 
-Streaming — /chat/stream uses FastAPI StreamingResponse. Frontend reads it with fetch() and ReadableStream, updating the message token by token.
+---
 
+## PII Redaction
 
+The `pii.py` module uses regex patterns to detect and redact:
 
-## Tradeoffs
+- Email addresses
+- Phone numbers
 
-Synchronous logging — writing to DB in the same request cycle keeps things simple. For higher traffic this should move to an async queue.
+Sensitive data is replaced before logs are stored in the database.
 
-No connection pooling — each DB call opens and closes a connection. Production would use psycopg2.pool or SQLAlchemy.
+Example:
 
-In-process SDK — lives in the same FastAPI process. Easy to reason about but harder to scale independently.
+```txt
+john@gmail.com → [EMAIL REDACTED]
+```
 
-100-char preview — enough to debug without bloating storage. Full content is always in the messages table.
+---
 
+## Live Dashboard
 
+The dashboard displays:
 
-## Tech Stack
+- Average latency
+- Total tokens
+- Request count
+- Error count
 
-Backend — FastAPI (Python)
-Database — PostgreSQL
-LLM — Groq (LLaMA 3.1 8B / LLaMA 3.3 70B)
-Frontend — React + Vite + Recharts
+Charts are built using Recharts.
 
+---
 
-## What I'd Improve With More Time
+## Multi-Model Support
 
-Async logging — move DB writes to a background queue (Redis + worker) so they don't add latency to the chat response.
+Users can switch between:
 
-Connection pooling — use psycopg2.pool or SQLAlchemy so the app isn't opening and closing a new DB connection on every request.
+- `llama-3.1-8b-instant`
+- `llama-3.3-70b-versatile`
 
-Pagination — /logs and /conversations currently return everything. For large datasets these need limit/offset pagination.
+during an active conversation.
 
-Better error handling — retry logic in the SDK for transient Groq API failures, and proper error messages shown in the UI.
+---
 
-Auth — right now anyone can see all conversations. Adding user accounts would scope conversations per user.
+# Design Tradeoffs
 
-More providers — extend multi-provider support to OpenAI and Anthropic once API keys are available.
-HTTP Client — Axios
-Containerization — Docker + Docker Compose
+## Synchronous Logging
+
+Inference logs are written during the request cycle. This keeps the implementation simple but adds some latency.
+
+For production-scale traffic, logging should move to a background worker or queue.
+
+---
+
+## No Connection Pooling
+
+The current implementation opens and closes database connections per request.
+
+A production setup would use:
+
+- `psycopg2.pool`
+- SQLAlchemy connection pooling
+
+---
+
+## In-Process SDK
+
+The SDK layer currently runs inside the FastAPI application process.
+
+This simplifies development but makes independent scaling harder.
+
+---
+
+## Limited Log Preview
+
+Only a short preview of content is stored in inference logs to reduce storage usage, while full conversations remain available in the `messages` table.
+
+---
+
+# What I'd Improve With More Time
+
+## Async Logging
+
+Move logging to a background queue using Redis and workers so database writes do not impact chat latency.
+
+---
+
+## Connection Pooling
+
+Use SQLAlchemy or psycopg2 pooling for better database performance under load.
+
+---
+
+## Pagination
+
+Currently `/logs` and `/conversations` return all records.
+
+Pagination with limit/offset should be added for scalability.
+
+---
+
+## Better Error Handling
+
+Improve retry handling for transient Groq API failures and display cleaner error messages in the frontend UI.
+
+---
+
+## Authentication
+
+Currently all conversations are public within the app.
+
+Adding authentication would allow conversation isolation per user.
+
+---
+
+## Multi-Provider Support
+
+Extend provider support beyond Groq to include:
+
+- OpenAI
+- Anthropic
+
+---
+
+# Tech Stack
+
+## Backend
+- FastAPI
+- Python
+
+## Frontend
+- React
+- Vite
+- Recharts
+
+## Database
+- PostgreSQL
+
+## LLM Provider
+- Groq
+- LLaMA 3.1 8B Instant
+- LLaMA 3.3 70B Versatile
+
+## HTTP Client
+- Axios
+
+## Containerization
+- Docker
+- Docker Compose
+
+---
+
+# What I have to improve with more time
+
+This project can be extended into a production-grade observability platform for LLM applications by adding:
+
+- Authentication and user management
+- Distributed logging
+- Request tracing
+- Multiple LLM providers
+- Rate limiting
+- Cost monitoring
+- Real-time analytics
+- Async processing pipelines
+
+---
