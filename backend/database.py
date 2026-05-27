@@ -1,11 +1,20 @@
 import psycopg2
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def get_connection():
-    conn = psycopg2.connect(
-        host="127.0.0.1",
-        database="ollive_db",
-        user="postgres",
-        password=""
-    )
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        conn = psycopg2.connect(database_url)
+    else:
+        conn = psycopg2.connect(
+            host="127.0.0.1",
+            database="ollive_db",
+            user="postgres",
+            password=""
+        )
     return conn
 
 def init_db():
@@ -27,7 +36,6 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS inference_logs (
             id SERIAL PRIMARY KEY,
