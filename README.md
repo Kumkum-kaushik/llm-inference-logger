@@ -2,7 +2,7 @@
 
 A full-stack chatbot app built with FastAPI, React, PostgreSQL, and Groq (LLaMA 3). Every LLM call gets logged — latency, tokens, model, status — so you can actually see what's happening under the hood.
 
----
+
 
 ## What this does
 
@@ -14,7 +14,7 @@ A full-stack chatbot app built with FastAPI, React, PostgreSQL, and Groq (LLaMA 
 - Streaming responses — text appears word by word as the model generates it
 - One-command Docker setup — no manual installs needed
 
----
+
 
 ## Quick Start (Docker)
 
@@ -24,7 +24,7 @@ A full-stack chatbot app built with FastAPI, React, PostgreSQL, and Groq (LLaMA 
 
 Frontend at http://localhost:5173 and API docs at http://localhost:8000/docs
 
----
+
 
 ## Manual Setup
 
@@ -47,7 +47,7 @@ cd frontend
 npm install
 npm run dev
 
----
+
 
 ## How it works
 
@@ -55,7 +55,7 @@ User chats in the React UI, which calls the FastAPI backend. The backend passes 
 
 Tables: conversations, messages, inference_logs
 
----
+
 
 ## API Endpoints
 
@@ -68,7 +68,7 @@ DELETE /conversation/{id}             Delete a conversation
 GET    /logs                          View recent inference logs
 GET    /stats                         Avg latency, total tokens, error count
 
----
+
 
 ## Bonus Features
 
@@ -82,7 +82,7 @@ Multi-provider — dropdown to pick between Groq Fast (llama-3.1-8b-instant) and
 
 Streaming — /chat/stream uses FastAPI StreamingResponse. Frontend reads it with fetch() and ReadableStream, updating the message token by token.
 
----
+
 
 ## Tradeoffs
 
@@ -94,7 +94,7 @@ In-process SDK — lives in the same FastAPI process. Easy to reason about but h
 
 100-char preview — enough to debug without bloating storage. Full content is always in the messages table.
 
----
+
 
 ## Tech Stack
 
