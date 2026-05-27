@@ -102,5 +102,20 @@ Backend — FastAPI (Python)
 Database — PostgreSQL
 LLM — Groq (LLaMA 3.1 8B / LLaMA 3.3 70B)
 Frontend — React + Vite + Recharts
+
+
+## What I'd Improve With More Time
+
+Async logging — move DB writes to a background queue (Redis + worker) so they don't add latency to the chat response.
+
+Connection pooling — use psycopg2.pool or SQLAlchemy so the app isn't opening and closing a new DB connection on every request.
+
+Pagination — /logs and /conversations currently return everything. For large datasets these need limit/offset pagination.
+
+Better error handling — retry logic in the SDK for transient Groq API failures, and proper error messages shown in the UI.
+
+Auth — right now anyone can see all conversations. Adding user accounts would scope conversations per user.
+
+More providers — extend multi-provider support to OpenAI and Anthropic once API keys are available.
 HTTP Client — Axios
 Containerization — Docker + Docker Compose
