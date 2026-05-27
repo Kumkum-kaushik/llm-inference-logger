@@ -6,7 +6,7 @@ The goal of this project is not only to build an LLM-powered chatbot, but also t
 
 The system also includes PII redaction, streaming responses, model switching, and a live analytics dashboard for monitoring inference behavior in real time.
 
----
+
 
 # Features
 
@@ -19,7 +19,7 @@ The system also includes PII redaction, streaming responses, model switching, an
 - Switch between multiple Groq LLaMA models during chat
 - Docker support for one-command setup
 
----
+
 
 # Quick Start (Docker)
 
@@ -54,7 +54,7 @@ FastAPI Docs:
 http://localhost:8000/docs
 ```
 
----
+
 
 # Manual Setup
 
@@ -65,7 +65,7 @@ http://localhost:8000/docs
 - PostgreSQL 17
 - Groq API Key
 
----
+
 
 # Backend Setup
 
@@ -106,7 +106,7 @@ Start the backend server:
 uvicorn main:app --reload
 ```
 
----
+
 
 # Frontend Setup
 
@@ -118,7 +118,7 @@ npm install
 npm run dev
 ```
 
----
+
 
 # Project Workflow
 
@@ -139,7 +139,7 @@ The system maintains three main tables:
 - `messages`
 - `inference_logs`
 
----
+
 
 # API Endpoints
 
@@ -154,7 +154,7 @@ The system maintains three main tables:
 | GET | `/logs` | Fetch inference logs |
 | GET | `/stats` | Fetch latency and token statistics |
 
----
+
 
 # Bonus Features
 
@@ -164,7 +164,7 @@ The `/chat/stream` endpoint uses FastAPI `StreamingResponse`.
 
 On the frontend, responses are handled using `fetch()` and `ReadableStream`, allowing tokens to appear gradually in real time.
 
----
+
 
 ## PII Redaction
 
@@ -181,7 +181,7 @@ Example:
 john@gmail.com → [EMAIL REDACTED]
 ```
 
----
+
 
 ## Live Dashboard
 
@@ -194,7 +194,7 @@ The dashboard displays:
 
 Charts are built using Recharts.
 
----
+
 
 ## Multi-Model Support
 
@@ -205,7 +205,7 @@ Users can switch between:
 
 during an active conversation.
 
----
+
 
 # Design Tradeoffs
 
@@ -215,7 +215,7 @@ Inference logs are written during the request cycle. This keeps the implementati
 
 For production-scale traffic, logging should move to a background worker or queue.
 
----
+
 
 ## No Connection Pooling
 
@@ -226,7 +226,7 @@ A production setup would use:
 - `psycopg2.pool`
 - SQLAlchemy connection pooling
 
----
+
 
 ## In-Process SDK
 
@@ -234,13 +234,13 @@ The SDK layer currently runs inside the FastAPI application process.
 
 This simplifies development but makes independent scaling harder.
 
----
+
 
 ## Limited Log Preview
 
 Only a short preview of content is stored in inference logs to reduce storage usage, while full conversations remain available in the `messages` table.
 
----
+
 
 # What I'd Improve With More Time
 
@@ -248,13 +248,13 @@ Only a short preview of content is stored in inference logs to reduce storage us
 
 Move logging to a background queue using Redis and workers so database writes do not impact chat latency.
 
----
+
 
 ## Connection Pooling
 
 Use SQLAlchemy or psycopg2 pooling for better database performance under load.
 
----
+
 
 ## Pagination
 
@@ -262,13 +262,13 @@ Currently `/logs` and `/conversations` return all records.
 
 Pagination with limit/offset should be added for scalability.
 
----
+
 
 ## Better Error Handling
 
 Improve retry handling for transient Groq API failures and display cleaner error messages in the frontend UI.
 
----
+
 
 ## Authentication
 
@@ -276,7 +276,7 @@ Currently all conversations are public within the app.
 
 Adding authentication would allow conversation isolation per user.
 
----
+
 
 ## Multi-Provider Support
 
@@ -285,7 +285,7 @@ Extend provider support beyond Groq to include:
 - OpenAI
 - Anthropic
 
----
+
 
 # Tech Stack
 
@@ -313,7 +313,7 @@ Extend provider support beyond Groq to include:
 - Docker
 - Docker Compose
 
----
+
 
 # What I have to improve with more time
 
