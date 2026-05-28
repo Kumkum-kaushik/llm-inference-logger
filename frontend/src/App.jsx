@@ -24,9 +24,17 @@ export default function App(){
     };
 
     const fetchStats = async () => {
-        const res = await axios.get(`${API}/stats`);
-        setStats(res.data);
+    const res = await axios.get(`${API}/stats`);
+    setStats(res.data);
     };
+
+    useEffect(() => {
+        if (tab === "dashboard") {
+        fetchStats();
+        const interval = setInterval(fetchStats, 5000);
+        return () => clearInterval(interval);
+    }
+    }, [tab]);
 
     const newConversation = async () => {
         const res = await axios.post(`${API}/conversation/new`);
