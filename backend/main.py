@@ -1,4 +1,5 @@
 import os
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -135,6 +136,7 @@ def chat_stream(input: MessageInput):
 
     def generate():
         full_response = ""
+        start_time = time.time()
         stream = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=history,
@@ -145,10 +147,27 @@ def chat_stream(input: MessageInput):
             full_response += token
             yield token
 
+        latency_ms = (time.time() - start_time) * 1000
+
         conn2 = get_connection()
         cur2 = conn2.cursor()
         cur2.execute("INSERT INTO messages (session_id, role, content) VALUES (%s, %s, %s)",
                      (input.session_id, "assistant", full_response))
+        cur2.execute("""
+            INSERT INTO inference_logs
+            (session_id, model, provider, latency_ms, input_tokens, output_tokens, status, input_preview, output_preview)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            input.session_id,
+            "llama-3.1-8b-instant",
+            input.provider,
+            latency_ms,
+            len(str(history)),
+            len(full_response),
+            "success",
+            history[-1]["content"][:100],
+            full_response[:100]
+        ))
         conn2.commit()
         cur2.close()
         conn2.close()
